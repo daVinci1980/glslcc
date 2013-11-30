@@ -8,4 +8,6 @@ struct GLCCPreprocessor;
 extern "C" GLCCint genPreprocessor(GLCCPreprocessor** _newPreproc);
 extern "C" GLCCint deletePreprocessor(GLCCPreprocessor** _preproc);
 extern "C" GLCCint preprocessFromFile(GLCCPreprocessor* _preproc, const char* _filename);
-extern "C" GLCCint preprocessFromMemory(GLCCPreprocessor* _preproc, const char* _memBuffer);
+extern "C" GLCCint preprocessFromMemory(GLCCPreprocessor* _preproc, const char* _memBuffer, const char* _optFilename);
+
+extern "C" const char* getLastError(GLCCPreprocessor* _preproc);

@@ -10,7 +10,7 @@ inline char* stringDuplicate(const char* _inStr)
 
     // Determine length--doesn't include \0
     size_t strLen = 0;
-    while ((*_inStr) != 0) {
+    while ((*_inStr++) != 0) {
         ++strLen;
     }
 
@@ -21,7 +21,9 @@ inline char* stringDuplicate(const char* _inStr)
     const char* src = _inStr;
     char* dst = retBuffer;
     while (*src) {
-        *dst++ = *src++;
+        *dst = *src;
+        ++dst;
+        ++src;
     }
     *dst = '\0';
 

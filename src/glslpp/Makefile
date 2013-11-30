@@ -1,3 +1,13 @@
+
+TOP := ../..
+INC_DIRS := . ../common $(TOP)/include
+
+# Note that this is not resolved until used below--you can modify INC_DIRS anytime between here and the 
+# rules below. 
+INC = $(foreach d,$(INC_DIRS),-I$d)
+
+
+
 all: glslpp
 
 clean:
@@ -11,7 +21,7 @@ parserpp.hpp: parserpp.cpp
 tokenspp.cpp: tokenspp.l parserpp.hpp
 	flex -d -o $@ $^
 
-glslpp: parserpp.cpp main.cpp tokenspp.cpp
-	g++ -o $@ $^
+glslpp: parserpp.cpp main.cpp tokenspp.cpp preproc.cpp
+	g++ -g -o $@ $(INC) $^
 
 .PHONY: all clean

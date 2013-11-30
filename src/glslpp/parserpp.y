@@ -1,8 +1,7 @@
 %{
-    #include "node.h"
+    // #include "node.h"
+    #include <string>
     #include <stdio.h>
-    // TODO: Figure out how to get rid of this global.
-    NBlock *gTranslationUnit;
 
     extern int yylex();
     extern int gLineNum; 
@@ -14,8 +13,8 @@
 %union {
     std::string *string;
     int token;
-    NBlock* block;
-    NBlock* node;
+    // NBlock* block;
+    // NBlock* node;
 }
 
 %error-verbose

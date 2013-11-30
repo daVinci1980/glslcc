@@ -1,33 +1,56 @@
 
-#include "glcc/common.h"
-#include "glcc/preproc.h"
+#include "common/common.h"
+#include "glslpp/preproc.h"
+
+#include "fileutils.h"
+#include "stringutils.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+GLCCint _preprocess(GLCCPreprocessor* _preproc);
+GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc);
+GLCCint _preprocessPhaseThree(GLCCPreprocessor* _preproc);
+GLCCint _preprocessPhaseFour(GLCCPreprocessor* _preproc);
+
+template<typename T>
+GLCCint ReportError(GLCCint _errCode, T *_where, const char* _fmt, ...)
+{
+    // Cleanup if anythign is there already.
+    if (_where->mErrorString) {
+        delete [] _where->mErrorString;
+        _where->mErrorString = NULL;
+    }
+
+    // determine required size.
+    va_list args;
+    va_start( args, _fmt);
+    int reqSize = vsnprintf(NULL, 0, _fmt, args);
+    assert(reqSize >= 0);
+    va_end(args);
+
+    // Create new place.
+    va_start( args, _fmt);
+    _where->mErrorString = new char[reqSize + 1];
+    vsnprintf(_where->mErrorString, reqSize + 1, _fmt, args);
+    va_end(args);
+
+    return _errCode;
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-enum ECommentMode {
-    ECM_NoComment = 0,
-    ECM_SingleLine,
-    ECM_MultiLine,
-
-    ECM_MAX
-};
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-struct GLCCPreprocessor {
-    char* mFilename
+struct GLCCPreprocessor 
+{
+    char* mFilename;
     char* mInputBuffer;
     char* mOutputBuffer;
     char* mErrorString;
 
     GLCCint mVersionGLSL;
     bool mUsedLineContinuations;
-
-    ECommentMode mCommentMode;
-
-
 
     // --------------------------------------------------------------------------------------------
     GLCCPreprocessor()
@@ -37,7 +60,6 @@ struct GLCCPreprocessor {
     , mErrorString(NULL)
     , mVersionGLSL(110) // Per the spec, this is the default.
     , mUsedLineContinuations(false)
-    , mCommentMode(ECM_NoComment)
     { }
 
     // --------------------------------------------------------------------------------------------
@@ -53,18 +75,18 @@ struct GLCCPreprocessor {
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-GLCCstatus genPreprocessor(GLCCPreprocessor** _newPreproc)
+GLCCint genPreprocessor(GLCCPreprocessor** _newPreproc)
 {
     if (!_newPreproc) {
         return GLCCError_MissingRequiredParameter;
     }
 
-    (*_newPreproc)) = new GLCCPreprocessor;
+    (*_newPreproc) = new GLCCPreprocessor;
     return GLCCError_Ok;
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCstatus deletePreprocessor(GLCCPreprocessor** _preproc)
+GLCCint deletePreprocessor(GLCCPreprocessor** _preproc)
 {
     if (!_preproc) {
         return GLCCError_MissingRequiredParameter;
@@ -85,7 +107,7 @@ GLCCint preprocessFromFile(GLCCPreprocessor* _preproc, const char* _filename)
         return GLCCError_MissingRequiredParameter;
     }
 
-    _preproc->mFilename = _filename;
+    _preproc->mFilename = stringDuplicate(_filename);
     _preproc->mInputBuffer = fileContentsToString(_filename);
     if (_preproc->mInputBuffer == NULL) {
         return GLCCError_FileNotFound;
@@ -95,20 +117,30 @@ GLCCint preprocessFromFile(GLCCPreprocessor* _preproc, const char* _filename)
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCint preprocessFromMemory(GLCCPreprocessor* _preproc, const char* _memBuffer)
+GLCCint preprocessFromMemory(GLCCPreprocessor* _preproc, const char* _memBuffer, const char* _optFilename)
 {
     if (!_preproc || !_memBuffer) {
         return GLCCError_MissingRequiredParameter;
     }
 
-    _preproc->mFilename = stringDuplicate("MemoryBuffer");
+    _preproc->mFilename = stringDuplicate((_optFilename != NULL) ? _optFilename : "MemoryBuffer");
     _preproc->mInputBuffer = stringDuplicate(_memBuffer);
 
     return _preprocess(_preproc);
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCint _preprocess(GLCCPreprocess* _preproc)
+const char* getLastError(GLCCPreprocessor* _preproc)
+{
+    if (!_preproc) {
+        return NULL;
+    }
+
+    return _preproc->mErrorString;
+}
+
+// ------------------------------------------------------------------------------------------------
+GLCCint _preprocess(GLCCPreprocessor* _preproc)
 {
     GLCCint errCode = GLCCError_Ok;
     // In the C preprocessor, phase 1 is reading into memory. If we're here, we've already 
@@ -124,7 +156,7 @@ GLCCint _preprocess(GLCCPreprocess* _preproc)
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCint _preprocessPhaseTwo(GLCCPreprocess* _preproc)
+GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc)
 {
     // Phase Two is line continuation. We do this in-place in _preproc->mInputBuffer. 
 
@@ -144,31 +176,33 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocess* _preproc)
 
     bool advanceDst = false;
     for (srcFp = 0; _preproc->mInputBuffer[srcFp]; ++srcFp) {
-        char thisChar = _preproc->mInputBuffer[srcFp]; 
+        char thisChar = _preproc->mInputBuffer[srcFp + 0]; 
         char nextChar = _preproc->mInputBuffer[srcFp + 1];
+        int advanceSrc = 0;
 
-        if (thisChar == '\\') {
-            if (nextChar == '\n') {
-                advanceDst = false;
-                ++srcFp;
-            } else {
-                return ReportError(GLCCError_InvalidSyntax, _preproc, 
-                                   "Syntax error at line %d, column %d. '\\' is only allowed immediately prior to end-of-line.", 
-                                   lineNum, charNum);
-            }
+        if (thisChar == '\\' && nextChar == '\n') {
+            advanceDst = false;
+            advanceSrc = 1;
         } else {
             advanceDst = true;
         }
 
         // PERFORMANCE: Profile whether an extra branch here matters. We do this a lot. It could
         // be that the branch here costs more than it saves and it could be factored out.
-        if (advanceDst && dstFp != srcFp) {
-            _preProc->mInputBuffer[dstFp++] = thisChar;
+        if (dstFp != srcFp && advanceDst) {
+            _preproc->mInputBuffer[dstFp] = thisChar;
         }
 
         if (thisChar == '\n') {
             ++lineNum;
             charNum = 1;
+        }
+
+        // Move the srcFp forward (skipping characters) as necessary.
+        srcFp += advanceSrc;
+
+        if (advanceDst) {
+            ++dstFp;
         }
     }
 
@@ -180,7 +214,7 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocess* _preproc)
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
+GLCCint _preprocessPhaseThree(GLCCPreprocessor* _preproc)
 {
     // Phase three is comment processing. At this point, line continuations are gone, so any EOLs
     // that remain are "real", and will have effects on non-comment characters.
@@ -189,6 +223,13 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
     //     - EOLs are preserved in both single and multi-line comments.
     // As with line continuations, we do this in-place in _preproc->mInputBuffer.
 
+    enum ECommentMode {
+        ECM_NoComment = 0,
+        ECM_SingleLine,
+        ECM_MultiLine
+    };
+
+    ECommentMode commentMode = ECM_NoComment;
     size_t srcFp = 0;
     size_t dstFp = 0;
     size_t lineNum = 1;
@@ -196,17 +237,17 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
 
     bool advanceDst = false;
     for (srcFp = 0; _preproc->mInputBuffer[srcFp]; ++srcFp) {
-        char thisChar = _preproc->mInputBuffer[srcFp]; 
+        char thisChar = _preproc->mInputBuffer[srcFp + 0]; 
         char nextChar = _preproc->mInputBuffer[srcFp + 1];
 
-        switch(_preproc->mCommentMode) {
+        switch(commentMode) {
             case ECM_NoComment: 
             {
                 if (thisChar == '/') {
                     if (nextChar == '/') {
                         // Entering a single line comment. Write a space.
                         _preproc->mInputBuffer[dstFp++] = ' ';
-                        _preproc->mCommentMode = ECM_SingleLine;
+                        commentMode = ECM_SingleLine;
                         // Move the source location. This is for consistency--but not needed for single line
                         // comments. It *is* required for multi-line comments.
                         ++srcFp;
@@ -214,7 +255,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
                     } else if (nextChar == '*') {
                         // Entering multi-line comment. Write a space.
                         _preproc->mInputBuffer[dstFp++] = ' ';
-                        _preproc->mCommentMode = ECM_MultiLine;
+                        commentMode = ECM_MultiLine;
                         // We must move the src pointer here--otherwise we would recognize /*/ 
                         // as a begin and end of a comment string.
                         ++srcFp;
@@ -229,7 +270,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
             case ECM_SingleLine:
             {
                 if (thisChar == '\n') {
-                    _preproc->mCommentMode = ECM_NoComment;
+                    commentMode = ECM_NoComment;
                     _preproc->mInputBuffer[dstFp++] = thisChar;
                 }
                 break;
@@ -243,7 +284,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
                 }
 
                 if (thisChar == '*' && nextChar == '/') {
-                    _preproc->mCommentMode = ECM_NoComment;
+                    commentMode = ECM_NoComment;
                     // Advance the src pointer, otherwise we'd recognize */* as a finish->start comment.
                     ++srcFp;
                 }
@@ -252,7 +293,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
             }
 
             default:
-                assert(!"Error in parser.")
+                assert(!"Error in parser.");
                 break;
         };
     }
@@ -264,7 +305,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocess* _preproc)
 }
 
 // ------------------------------------------------------------------------------------------------
-GLCCint _preprocessPhaseFour(GLCCPreprocess* _preproc)
+GLCCint _preprocessPhaseFour(GLCCPreprocessor* _preproc)
 {
     // Phase four is what people think of when they think of the preprocessor. This does 
     // processing on preprocessor directives, macro substitution, etc.
@@ -284,5 +325,7 @@ GLCCint _preprocessPhaseFour(GLCCPreprocess* _preproc)
     //     For this reason, you'll find that the lexxer/parser for this have rules to basically
     //     determine when they do and do not care about EOLs. 
 
-    return GLCCError_Ok;
+    printf("%s", _preproc->mInputBuffer);
+
+    return ReportError(GLCCError_NotImplemented, _preproc, "Phase %d has not yet been implemented. %s", 4, "food");
 }
