@@ -11,12 +11,14 @@ int main(int argc, char* argv[])
     GLCCint errCode = GLCCError_Ok;
     GLCCint tmpErrCode = GLCCError_Ok;
     
+    GLPPOptions opts;
+
     if (argc < 2) {
         errCode = GLCCError_MissingRequiredParameter;
         goto exit;
     }
 
-    if ((errCode = genPreprocessor(&preproc)) != GLCCError_Ok) 
+    if ((errCode = genPreprocessor(&preproc, &opts)) != GLCCError_Ok) 
         goto exit;
 
     if ((errCode = preprocessFromFile(preproc, argv[1])) != GLCCError_Ok) {
@@ -27,7 +29,6 @@ int main(int argc, char* argv[])
 
         goto cleanup;
     }
-
 
 
 cleanup:

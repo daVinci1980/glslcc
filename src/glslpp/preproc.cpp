@@ -14,6 +14,11 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc);
 GLCCint _preprocessPhaseThree(GLCCPreprocessor* _preproc);
 GLCCint _preprocessPhaseFour(GLCCPreprocessor* _preproc);
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// TODO: Relocate this into a common header. This will work for any stateful object that has an 
+// char* mErrorString. 
 template<typename T>
 GLCCint ReportError(GLCCint _errCode, T *_where, const char* _fmt, ...)
 {
@@ -44,6 +49,8 @@ GLCCint ReportError(GLCCint _errCode, T *_where, const char* _fmt, ...)
 // ------------------------------------------------------------------------------------------------
 struct GLCCPreprocessor 
 {
+    const GLPPOptions mOptions;
+
     char* mFilename;
     char* mInputBuffer;
     char* mOutputBuffer;
@@ -53,8 +60,9 @@ struct GLCCPreprocessor
     bool mUsedLineContinuations;
 
     // --------------------------------------------------------------------------------------------
-    GLCCPreprocessor()
-    : mFilename(NULL)
+    GLCCPreprocessor(const GLPPOptions& _options)
+    : mOptions(_options)
+    , mFilename(NULL)
     , mInputBuffer(NULL)
     , mOutputBuffer(NULL)
     , mErrorString(NULL)
@@ -75,13 +83,19 @@ struct GLCCPreprocessor
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-GLCCint genPreprocessor(GLCCPreprocessor** _newPreproc)
+GLCCint genPreprocessor(GLCCPreprocessor** _newPreproc, const GLPPOptions* _optOptions)
 {
     if (!_newPreproc) {
         return GLCCError_MissingRequiredParameter;
     }
 
-    (*_newPreproc) = new GLCCPreprocessor;
+    // Options are optional. If unspecified, the defaults (per the constructor) will be used.
+    GLPPOptions myOpts;
+    if (_optOptions) {
+        myOpts = (*_optOptions);
+    }
+
+    (*_newPreproc) = new GLCCPreprocessor(myOpts);
     return GLCCError_Ok;
 }
 
@@ -173,6 +187,8 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc)
     size_t dstFp = 0;
     size_t lineNum = 1;
     size_t charNum = 1;
+    int contiguousLinesContinued = 0;
+    bool anyContinuations = false;
 
     bool advanceDst = false;
     for (srcFp = 0; _preproc->mInputBuffer[srcFp]; ++srcFp) {
@@ -181,9 +197,16 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc)
         int advanceSrc = 0;
 
         if (thisChar == '\\' && nextChar == '\n') {
+            ++contiguousLinesContinued;
+            anyContinuations = true;
             advanceDst = false;
             advanceSrc = 1;
         } else {
+            if (_preproc->mOptions.mMaintainLineCount && thisChar == '\n') {
+                while (contiguousLinesContinued-- > 0) {
+                    _preproc->mInputBuffer[dstFp++] = '\n';
+                }
+            }
             advanceDst = true;
         }
 
@@ -208,7 +231,7 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc)
 
     // Write out the new '\0', then record whether we did any line continuations.
     _preproc->mInputBuffer[dstFp] = '\0';
-    _preproc->mUsedLineContinuations = (srcFp != dstFp);
+    _preproc->mUsedLineContinuations = anyContinuations;
 
     return GLCCError_Ok;
 }
