@@ -204,7 +204,10 @@ GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc)
         } else {
             if (_preproc->mOptions.mMaintainLineCount && thisChar == '\n') {
                 while (contiguousLinesContinued-- > 0) {
+                    // Combined with the '\n' we're going to pick up from this line, this will
+                    // wind up with <SPACE><EOL> on each line.
                     _preproc->mInputBuffer[dstFp++] = '\n';
+                    _preproc->mInputBuffer[dstFp++] = ' ';
                 }
             }
             advanceDst = true;
