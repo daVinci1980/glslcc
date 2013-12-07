@@ -1,0 +1,17 @@
+
+SET(glslcc_BIN_DIR ${glslcc_SOURCE_DIR}/bin)
+
+SET(CMAKE_CXX_FLAGS "/WX /W3 /MP /GR /EHa /arch:SSE2")
+SET(CMAKE_CXX_FLAGS_DEBUG "/ZI /Od")
+SET(CMAKE_FLAGS_RELEASE "/Zi /O2")
+
+SET(CMAKE_EXE_LINKER_FLAGS "/DEBUG")
+SET(CMAKE_SHARED_LINKER_FLAGS "/DEBUG")
+SET(CMAKE_MODULE_LINKER_FLAGS "/DEBUG")
+
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${glslcc_BIN_DIR})
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${glslcc_BIN_DIR})
+
+include_directories( ${glslcc_SOURCE_DIR}/include )
+
+file( GLOB HDRS *.h ../common/*.h ${glslcc_SOURCE_DIR}/include/common/*.h ${glslcc_SOURCE_DIR}/include/glslpp/*.h )

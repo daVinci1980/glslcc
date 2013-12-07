@@ -1,13 +1,10 @@
 
-#include "common/common.h"
+#include "glslppafx.h"
+
 #include "glslpp/preproc.h"
 
 #include "fileutils.h"
 #include "stringutils.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdarg.h>
 
 GLCCint _preprocess(GLCCPreprocessor* _preproc);
 GLCCint _preprocessPhaseTwo(GLCCPreprocessor* _preproc);
@@ -353,5 +350,5 @@ GLCCint _preprocessPhaseFour(GLCCPreprocessor* _preproc)
 
     printf("%s", _preproc->mInputBuffer);
 
-    return ReportError(GLCCError_NotImplemented, _preproc, "Phase %d has not yet been implemented. %s", 4, "food");
+    return ReportError(GLCCError_NotImplemented, _preproc, "Phase %d has not yet been implemented.\n", 4);
 }
