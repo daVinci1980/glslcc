@@ -2,6 +2,7 @@
 #include "glslppafx.h"
 
 #include "glslpp/preproc.h"
+#include "common/parserutil.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -13,6 +14,12 @@ int main(int argc, char* argv[])
     GLCCint tmpErrCode = GLCCError_Ok;
     
     GLPPOptions opts;
+
+    extern const LexicalEntry* GetGlslTokens();
+    Lexer myLex(GetGlslTokens(), "   foo[]", NULL);
+    myLex.Pop();
+    myLex.Pop();
+    myLex.Pop();
 
     if (argc < 2) {
         errCode = GLCCError_MissingRequiredParameter;

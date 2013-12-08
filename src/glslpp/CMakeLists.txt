@@ -5,6 +5,7 @@ set( SRCS
 		glslppafx.cpp
 		main.cpp
 		preproc.cpp
+		tokens.cpp
 )
 
 include_directories( ${glslcc_SOURCE_DIR}/src/glslpp )
