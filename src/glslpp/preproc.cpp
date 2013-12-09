@@ -255,10 +255,7 @@ GLCCint _preprocessPhaseThree(GLCCPreprocessor* _preproc)
     ECommentMode commentMode = ECM_NoComment;
     size_t srcFp = 0;
     size_t dstFp = 0;
-    size_t lineNum = 1;
-    size_t charNum = 1;
 
-    bool advanceDst = false;
     for (srcFp = 0; _preproc->mInputBuffer[srcFp]; ++srcFp) {
         char thisChar = _preproc->mInputBuffer[srcFp + 0]; 
         char nextChar = _preproc->mInputBuffer[srcFp + 1];

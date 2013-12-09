@@ -3,6 +3,7 @@
 
 #include "glslpp/preproc.h"
 #include "common/parserutil.h"
+#include <iostream>
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -16,10 +17,13 @@ int main(int argc, char* argv[])
     GLPPOptions opts;
 
     extern const LexicalEntry* GetGlslTokens();
-    Lexer myLex(GetGlslTokens(), "   foo[]", NULL);
-    myLex.Pop();
-    myLex.Pop();
-    myLex.Pop();
+    extern const char** GetGlslReservedTypes();
+
+    StateObject parserState(GetGlslReservedTypes());
+    Lexer myLex(GetGlslTokens(), "struct Foo {\n\tdmat2x2 bar[3];\n\tfloat baz;\n};", &parserState);
+    for (Token tok = myLex.Pop(); !tok.IsEOF(); tok = myLex.Pop()) {
+        std::cout << tok << std::endl;
+    }
 
     if (argc < 2) {
         errCode = GLCCError_MissingRequiredParameter;

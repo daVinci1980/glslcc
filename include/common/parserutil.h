@@ -1,6 +1,14 @@
 #pragma once
 
 #include <regex>
+#include <set>
+#include <vector>
+
+
+class StateObject;
+
+typedef long long StreamOffset;
+typedef int (*CheckFunc)(const std::string& _match, const int _initialToken, StateObject* _state);
 
 // A single entry in a table of lexical rules for how to parse a string into tokens. Pattern 
 // should be a <regex> conformant string specifying the rule for a single token.
@@ -9,13 +17,51 @@ struct LexicalEntry
 {
 	const char* Pattern;
 	const int Token;
+    CheckFunc TokenCallback;
+};
+
+// A position within the stream. Useful for identifying the location of tokens, errors, etc.
+struct StreamPosition
+{
+    StreamPosition(StreamOffset _lineNum = 1, StreamOffset _colNum = 1);
+
+    StreamOffset mLineNum;
+    StreamOffset mColNum;
+
+    friend std::ostream& operator<<(std::ostream& _os, const StreamPosition& _streamPos);
 };
 
 // The sentinel rule, which must always end a list of LexicalEntry's.
 extern const LexicalEntry SentinelRule;
 
-class StateObject;
-class Token { };
+class StateObject
+{
+public:
+    // ReservedTypes is a list of strings with nullptr as the last element.
+    StateObject(const char** _reservedTypes);
+
+    bool IsValidType(const std::string& _identifier) const;
+
+private:
+    std::set<std::string> mTypes;
+};
+
+class Token 
+{
+public:
+    // The default constructor sets parameters to REJECTTOKEN, "", StreamPosition(1, 1)
+    Token();
+    Token(int _streamTok, const std::string& _tokenString, StreamPosition _streamPos); 
+
+    bool IsEOF() const;
+
+private:
+    int mType;
+    std::string mString;
+    StreamPosition mLocation;
+
+    friend std::ostream& operator<<(std::ostream& _os, const Token& _token);
+};
 
 class Lexer
 {
@@ -41,16 +87,18 @@ private:
     {
         std::regex Regex;
         const int Token;
+        CheckFunc TokenCallback;    
     };
 
 private:
     std::vector<RuleEntry> mRules;
     std::string mStringToLex;
     std::string::const_iterator mSrcPos;
-	long long mLineNum;
-	long long mColNum;
+    StreamPosition mStreamPosition;
 	StateObject* mState;
     Token mLookaheadToken;
+
+    std::set<std::string> mTypes;
 };
 
 // This token id indicates that the lexer should grab this token, then ignore it and move to the next
