@@ -17,6 +17,8 @@
     // NBlock* node;
 }
 
+%expect 0
+
 %error-verbose
 
 %token <token> PPHASH PPDEFINE PPUNDEF PPIF PPIFDEF PPIFNDEF PPELSE PPELIF PPENDIF 
@@ -51,7 +53,7 @@
 %token <token> SAMPLER2DMSARRAY ISAMPLER2DMSARRAY USAMPLER2DMSARRAY
 
 %token <token> STRUCT VOID WHILE
-%token <string> IDENTIFIER 
+%token <string> IDENTIFIER TYPE_NAME
 %token <string> FLOATCONSTANT INTCONSTANT UINTCONSTANT BOOLCONSTANT
 %token <string> FIELD_SELECTION
 %token <token> LEFT_OP RIGHT_OP
@@ -65,28 +67,10 @@
 %token <token> INVARIANT
 %token <token> HIGH_PRECISION MEDIUM_PRECISION LOW_PRECISION PRECISION
 
-/* Define the type of node our nonterminal symbols represent.
-   The types refer to the %union declaration above. Ex: when
-   we call an ident (defined by union type ident) we are really
-   calling an (NIdentifier*). It makes the compiler happy.
- */
-
-%type <block> translation_unit
-%type <node> external_declaration
-
-/* 
-    Operator precedence for mathematical operators 
-%left PLUS DASH
-%left MUL DIV
-
-// TODO: Need to figure out how to do right-to-left for ppunary_expression.
-*/
-
 %start translation_unit
 
+%right THEN ELSE
 %%
-TYPE_NAME: IDENTIFIER { }
-         ;
 
 ppversion_line: PPVERSION INTCONSTANT EOL
               ;
@@ -648,7 +632,7 @@ selection_statement: IF LEFT_PAREN expression RIGHT_PAREN selection_rest_stateme
                    ;
 
 selection_rest_statement: statement ELSE statement { }
-                        | statement { }
+                        | statement %prec THEN { }
                         ;
 
 condition: expression { }
