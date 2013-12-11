@@ -11,6 +11,8 @@ bool gTokenizeMacroFuncDef = false;
 const char* gFileName = "stdin";
 %}
 
+%option noyywrap
+
 WS                          [ \t]+
 OWS                         [ \t]*
 
