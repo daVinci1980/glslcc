@@ -690,8 +690,7 @@ jump_statement: CONTINUE SEMICOLON { }
               | DISCARD SEMICOLON { }
               ;
 
-translation_unit : /* empty */ { }
-                 | preprocessor_line { }
+translation_unit : preprocessor_line { }
                  | external_declaration { }
                  | translation_unit external_declaration  { } 
                  ;

@@ -1,6 +1,14 @@
 
 include( ${glslcc_SOURCE_DIR}/build/CMakeCommon.txt )
 
+find_package(FLEX)
+find_package(BISON)
+
+FLEX_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.l ${CMAKE_CURRENT_BINARY_DIR}/tokenspp.cpp)
+BISON_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.y ${CMAKE_CURRENT_BINARY_DIR}/parserpp.cpp)
+
+ADD_FLEX_BISON_DEPENDENCY(glslpp glslpp)
+
 set( SRCS
 		glslppafx.cpp
 		main.cpp
@@ -11,7 +19,7 @@ set( SRCS
 include_directories( ${glslcc_SOURCE_DIR}/src/glslpp )
 include_directories( ${glslcc_SOURCE_DIR}/src/common )
 
-add_executable( glslpp ${SRCS} ${HDRS} )
+add_executable( glslpp ${SRCS} ${BISON_glslpp_OUTPUTS} ${FLEX_glslpp_OUTPUTS} ${HDRS} )
 
 set_target_properties( glslpp PROPERTIES RUNTIME_OUTPUT_NAME_DEBUG glslpp_d )
 

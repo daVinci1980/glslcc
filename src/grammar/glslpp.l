@@ -4,7 +4,7 @@
 #include "parserpp.hpp"
 #define SAVE_TOKEN yylval.string = new std::string(yytext, yyleng);
 #define TOKEN(t) (yylval.token = t)
-extern "C" int yywrap() { }
+
 int gLineNum = 0;
 bool gTokenizeEOL = false;
 bool gTokenizeMacroFuncDef = false;
