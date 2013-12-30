@@ -1,20 +1,67 @@
 #pragma once
 
-#define DeclareProduction(_name) \
-    class _name : public ProductionBase { public: virtual Node* operator(); }
+#include <vector>
 
-#define DefineProduction(_name) \
-    Node* _name::operator()
+class Node;
+class ProductionBase;
+enum GLSLTokenIDs;
 
+typedef Node* (*ProductionFunc)();
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+class RuleSet
+{
+public:
+    inline RuleSet() { }
+    inline RuleSet(ProductionFunc _rule) { mRules.push_back(_rule); }
+    inline RuleSet(GLSLTokenIDs _tok) { mRules.push_back([]() -> Node* { return nullptr; }); }
+
+    inline void Append(ProductionFunc _rule)
+    {
+        assert(_rule);
+        mRules.push_back(_rule);
+    }
+
+private:
+
+    std::vector<ProductionFunc> mRules;
+};
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+class Node
+{
+public:
+
+private:
+    Node* mFirstChild;
+    Node* mNextSibling;
+};
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class ProductionBase
 {
 public:
-    virtual Node* operator() = 0;
+    virtual Node* operator()() = 0;
 };
 
+// ------------------------------------------------------------------------------------------------
+#define DeclareProduction(_name) \
+        extern Node* _name()
+
+// ------------------------------------------------------------------------------------------------
+#define DefineProduction(_name) \
+    Node* _name()
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 DeclareProduction(variable_identifier);
-DeclareProduction(primary_expression);
 DeclareProduction(primary_expression);
 DeclareProduction(postfix_expression);
 DeclareProduction(integer_expression);
