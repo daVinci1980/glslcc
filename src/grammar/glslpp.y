@@ -76,7 +76,7 @@ ppversion_line: PPVERSION INTCONSTANT EOL
               ;
 
 ppdefine_line: PPDEFINE IDENTIFIER tokenlistopt EOL { }
-             | PPDEFINE MACRO_FUNC_IDENTIFIER variable_identifier_list RIGHT_PAREN tokenlistopt EOL { } 
+             | PPDEFINE MACRO_FUNC_IDENTIFIER ppvariable_identifier_list RIGHT_PAREN tokenlistopt EOL { } 
              ;
 
 ppundef_line: PPUNDEF IDENTIFIER EOL { }
@@ -212,9 +212,9 @@ preprocessor_line: PPHASH { }
 
 variable_identifier: IDENTIFIER { }
 
-variable_identifier_list: variable_identifier
-                        | variable_identifier_list COMMA variable_identifier
-                        ;
+ppvariable_identifier_list: variable_identifier
+                          | ppvariable_identifier_list COMMA variable_identifier
+                          ;
 
 primary_expression: variable_identifier { }
                   | INTCONSTANT { }

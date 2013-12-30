@@ -4,8 +4,8 @@ include( ${glslcc_SOURCE_DIR}/build/CMakeCommon.txt )
 find_package(FLEX)
 find_package(BISON)
 
-FLEX_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.l ${CMAKE_CURRENT_BINARY_DIR}/tokenspp.cpp)
-BISON_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.y ${CMAKE_CURRENT_BINARY_DIR}/parserpp.cpp)
+FLEX_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.l ${CMAKE_CURRENT_BINARY_DIR}/tokenspp.cpp COMPILE_FLAGS "-d")
+BISON_TARGET(glslpp ${glslcc_SOURCE_DIR}/src/grammar/glslpp.y ${CMAKE_CURRENT_BINARY_DIR}/parserpp.cpp COMPILE_FLAGS "-t -v")
 
 ADD_FLEX_BISON_DEPENDENCY(glslpp glslpp)
 
