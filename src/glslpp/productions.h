@@ -1,22 +1,39 @@
 #pragma once
 
 #include <vector>
+#include "tokens.h"
 
 class Node;
 class ProductionBase;
-enum GLSLTokenIDs;
+class TokenList;
 
 typedef Node* (*ProductionFunc)();
+typedef Node* (*ProcessFunc)(TokenList*);
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
+template <typename TokenType>
 class RuleSet
 {
 public:
     inline RuleSet() { }
     inline RuleSet(ProductionFunc _rule) { mRules.push_back(_rule); }
-    inline RuleSet(GLSLTokenIDs _tok) { mRules.push_back([]() -> Node* { return nullptr; }); }
+    inline RuleSet(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); }
+    inline RuleSet(ProcessFunc _proc) { mProcs.push_back(_proc); }
+
+    inline RuleSet& operator=(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
+    inline RuleSet& operator=(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
+    inline RuleSet& operator=(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
+
+    inline RuleSet& operator|(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
+    inline RuleSet& operator|(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
+    inline RuleSet& operator|(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
+    inline RuleSet& operator|(const RuleSet &_prebuiltRule) { return *this; }
+
+    inline RuleSet& operator&(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
+    inline RuleSet& operator&(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
+    inline RuleSet& operator&(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
 
     inline void Append(ProductionFunc _rule)
     {
@@ -27,7 +44,37 @@ public:
 private:
 
     std::vector<ProductionFunc> mRules;
+    std::vector<ProcessFunc> mProcs;
 };
+
+template<typename TokenType>
+Node* Accept(const TokenType& _rs) { return nullptr; }
+
+template<typename TokenType>
+Node* Accept(const RuleSet<TokenType>& _rs) { return nullptr; }
+
+
+template <typename TokenType>
+inline RuleSet<TokenType> operator|(ProductionFunc _func, TokenType _tok)
+{
+    RuleSet<TokenType> rs(_func);
+    return rs | _tok;
+}
+
+template <typename TokenType>
+inline RuleSet<TokenType> operator&(TokenType _tok, ProductionFunc _rule)
+{
+    RuleSet<TokenType> rs(_tok);
+    return rs & _rule;
+}
+
+template <typename TokenType>
+inline RuleSet<TokenType> operator&(TokenType _tok, ProcessFunc _func)
+{
+    RuleSet<TokenType> rs(_tok);
+    return rs & _func;
+}
+
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -37,8 +84,10 @@ class Node
 public:
 
 private:
+#if 0
     Node* mFirstChild;
     Node* mNextSibling;
+#endif
 };
 
 // ------------------------------------------------------------------------------------------------

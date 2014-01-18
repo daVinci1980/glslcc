@@ -1,35 +1,5 @@
 #include "glslppafx.h"
 #include "productions.h"
-#include "tokens.h"
-
-RuleSet operator|(ProductionFunc _func, GLSLTokenIDs _tok)
-{
-    RuleSet rs;
-    rs.Append(_func);
-    rs.Append([]() -> Node* { return nullptr; });
-    return rs;
-}
-
-RuleSet operator|(GLSLTokenIDs _tok1, GLSLTokenIDs _tok2)
-{
-    RuleSet rs;
-    rs.Append([]() -> Node* { return nullptr; });
-    rs.Append([]() -> Node* { return nullptr; });
-    return rs;
-}
-
-RuleSet& operator|(RuleSet& _rs, ProductionFunc _prod)
-{
-    _rs.Append(_prod);
-    return _rs;
-}
-
-RuleSet& operator|(RuleSet& _rs, GLSLTokenIDs _tok)
-{
-    return _rs;
-}
-
-Node* Accept(const RuleSet& _rs) { return nullptr; }
 
 DefineProduction(variable_identifier)
 {
@@ -37,15 +7,22 @@ DefineProduction(variable_identifier)
 }
 
 DefineProduction(primary_expression) 
-{
-    Accept(variable_identifier
-         | INTCONSTANT
-         | UINTCONSTANT
-         | FLOATCONSTANT
-         | BOOLCONSTANT
-         | (LEFT_PAREN, expression, RIGHT_PAREN)
+{    
+    return Accept(
+          variable_identifier
+        | INTCONSTANT
+        | UINTCONSTANT
+        | FLOATCONSTANT
+        | BOOLCONSTANT & [](TokenList* _tl) -> Node* { 
+            return nullptr; 
+          } 
+        | LEFT_PAREN & expression & RIGHT_PAREN & [](TokenList* _tl) -> Node* { return nullptr; } 
     );
+
+    // return Accept(rs);
 }
+
+#if 0
 
 DefineProduction(postfix_expression) { }
 DefineProduction(integer_expression) { }
@@ -72,7 +49,9 @@ DefineProduction(logical_or_expression) { }
 DefineProduction(conditional_expression) { }
 DefineProduction(assignment_expression) { }
 DefineProduction(assignment_operator) { }
-DefineProduction(expression) { }
+#endif
+DefineProduction(expression) { return nullptr; }
+#if 0
 DefineProduction(constant_expression) { }
 DefineProduction(declaration) { }
 DefineProduction(function_prototype) { }
@@ -126,3 +105,5 @@ DefineProduction(jump_statement) { }
 DefineProduction(translation_unit) { }
 DefineProduction(external_declaration) { }
 DefineProduction(function_definition) { }
+
+#endif

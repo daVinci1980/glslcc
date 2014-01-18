@@ -4,6 +4,7 @@
 #include "glslpp/preproc.h"
 #include "common/parserutil.h"
 #include <iostream>
+#include "productions.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -24,6 +25,8 @@ int main(int argc, char* argv[])
     for (Token tok = myLex.Pop(); !tok.IsEOF(); tok = myLex.Pop()) {
         std::cout << tok << std::endl;
     }
+
+    Node* n = Accept(primary_expression);
 
     if (argc < 2) {
         errCode = GLCCError_MissingRequiredParameter;
