@@ -1,7 +1,15 @@
 #pragma once
 
-enum GLSLTokenIDs 
+#include "common/lexer.h"
+
+struct StateObjectGLSL;
+
+enum GLSLTokenID 
 {
+    IGNORETOKEN = -2,
+    REJECTTOKEN = -1,
+    EOFTOKEN = 0,
+
     ATTRIBUTE = 1,
     CONST,
     BREAK,
@@ -90,3 +98,6 @@ enum GLSLTokenIDs
     TYPE_NAME
 };
 
+typedef TokenT<GLSLTokenID> TokenGLSL;
+extern const LexicalEntry<GLSLTokenID, StateObjectGLSL> glslTokens[];
+extern const char* glslReservedTypes[];

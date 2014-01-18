@@ -3,20 +3,20 @@
 
 DefineProduction(variable_identifier)
 {
-    return Accept(IDENTIFIER);
+    return Accept(_p, _tl, IDENTIFIER);
 }
 
 DefineProduction(primary_expression) 
 {    
-    return Accept(
+    return Accept(_p, _tl,
           variable_identifier
         | INTCONSTANT
         | UINTCONSTANT
         | FLOATCONSTANT
-        | BOOLCONSTANT & [](TokenList* _tl) -> Node* { 
+        | BOOLCONSTANT & SemanticAction { 
             return nullptr; 
           } 
-        | LEFT_PAREN & expression & RIGHT_PAREN & [](TokenList* _tl) -> Node* { return nullptr; } 
+        | LEFT_PAREN & expression & RIGHT_PAREN & SemanticAction { return nullptr; } 
     );
 
     // return Accept(rs);

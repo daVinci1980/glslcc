@@ -1,77 +1,192 @@
 #pragma once
 
+#include <list>
 #include <vector>
 #include "tokens.h"
 
 class Node;
+class Parser;
 class ProductionBase;
-class TokenList;
+class Token;
+typedef std::list<Token*> TokenList;
 
-typedef Node* (*ProductionFunc)();
-typedef Node* (*ProcessFunc)(TokenList*);
+typedef Node* (*Nonterminal)(Parser*, TokenList*);
+// const int is unused--just to differentiate between nonterminals and SemanticActions
+typedef Node* (*SemanticAction)(Parser*, TokenList*, const int); 
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-template <typename TokenType>
-class RuleSet
+template <typename Terminal>
+class Production
 {
 public:
-    inline RuleSet() { }
-    inline RuleSet(ProductionFunc _rule) { mRules.push_back(_rule); }
-    inline RuleSet(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); }
-    inline RuleSet(ProcessFunc _proc) { mProcs.push_back(_proc); }
+    inline Production()                                     { NewAlternative(); }
+    inline Production(Nonterminal _nt)                      { NewAlternative(_nt); }
+    inline Production(Terminal _t)                          { NewAlternative(_t); }
+    inline Production(SemanticAction _sa)                   { NewAlternative(_sa); }
+    inline ~Production()                                    { Clear(); }
 
-    inline RuleSet& operator=(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
-    inline RuleSet& operator=(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
-    inline RuleSet& operator=(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
+    inline Production& operator=(Nonterminal _nt)           { Clear(); NewAlternative(_nt); return *this; }
+    inline Production& operator=(Terminal _t)               { Clear(); NewAlternative(_t); return *this; }
+    inline Production& operator=(SemanticAction _sa)        { Clear(); NewAlternative(_sa); return *this; }
 
-    inline RuleSet& operator|(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
-    inline RuleSet& operator|(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
-    inline RuleSet& operator|(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
-    inline RuleSet& operator|(const RuleSet &_prebuiltRule) { return *this; }
+    inline Production& operator|(Nonterminal _nt)           { NewRule(_nt); return *this; }
+    inline Production& operator|(Terminal _t)               { NewRule(_t); return *this; }
+    inline Production& operator|(SemanticAction _sa)        { NewRule(_sa); return *this; }
+    inline Production& operator|(const Production &_prod)   { NewRule(_prod); return *this; }
 
-    inline RuleSet& operator&(ProductionFunc _rule) { mRules.push_back(_rule); return *this; }
-    inline RuleSet& operator&(TokenType _tok) { mRules.push_back([]() -> Node* { return nullptr; }); return *this; }
-    inline RuleSet& operator&(ProcessFunc _proc) { mProcs.push_back(_proc); return *this; }    
+    inline Production& operator&(Nonterminal _nt)           { NewAlternative(_nt); return *this; }
+    inline Production& operator&(Terminal _t)               { NewAlternative(_t); return *this; }
+    inline Production& operator&(SemanticAction _sa)        { NewAlternative(_sa); return *this; }
 
-    inline void Append(ProductionFunc _rule)
+    Node* Accept(Parser* _p) const
     {
-        assert(_rule);
-        mRules.push_back(_rule);
+        Node* retVal = nullptr;
+        for (auto alternative = mAlternatives.cbegin(); alternative != mAlternatives.cend(); ++alternative) {
+            TokenList matchedTokens;
+
+            // Right now, just using backtracking. Should do something better.
+            _p->SetCheckpoint();
+
+            for (auto rule = alternative->cbegin(); rule != alternative->cend(); ++rule) {
+                retVal = (*rule)->Accept(_p, matchedTokens);
+                if (retVal) {
+                    break;
+                }
+            }
+
+            if (retVal) { 
+                _p->ClearCheckpoint();
+                break;
+            }
+
+            _p->RestoreCheckpoint();
+        }
+
+        return retVal;
     }
 
 private:
+    // --------------------------------------------------------------------------------------------
+    struct Rule
+    {
+        virtual Node* Accept(Parser* _parser, TokenList* _tl) const = 0;
+    };
 
-    std::vector<ProductionFunc> mRules;
-    std::vector<ProcessFunc> mProcs;
+    // --------------------------------------------------------------------------------------------
+    struct RuleTerminal : public Rule
+    {
+        RuleTerminal(Terminal _t) : mTerminal(_t) { }
+
+        virtual Node* Accept(Parser* _parser, TokenList* _tl) const {
+        #if 0
+            if (_parser->Peek().GetType() == mTerminal) {
+                Token tok = _parser->Pop();
+                _tl->push_back(tok);
+                return new Node(tok);
+            }
+        #endif
+
+            return nullptr;
+        }
+
+        const Terminal mTerminal;
+    };
+
+    // --------------------------------------------------------------------------------------------
+    struct RuleNonterminal : public Rule
+    {
+        RuleNonterminal(Nonterminal _nt) : mNonterminal(_nt) { }
+
+        virtual Node* Accept(Parser* _parser, TokenList* _tl) const {
+            return mNonterminal(_parser, _tl);
+        }
+
+        const Nonterminal mNonterminal;
+    };
+
+    // --------------------------------------------------------------------------------------------
+    struct RuleSemanticAction : public Rule
+    {
+        RuleSemanticAction(SemanticAction _sa) : mSemanticAction(_sa) { }
+
+        virtual Node* Accept(Parser* _parser, TokenList* _tl) const {
+            return mSemanticAction(_parser, _tl, 0);
+        }
+
+        const SemanticAction mSemanticAction;
+
+    };
+
+    // --------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
+    void Clear()
+    {
+        for (auto alternative = mAlternatives.begin(); alternative != mAlternatives.end(); ++alternative) {
+            for (auto rule = alternative->begin(); rule != alternative->end(); ++rule) {
+                delete (*rule);
+            }
+        }
+
+        mAlternatives.clear();
+    }
+
+    void NewAlternative()                       { mAlternatives.push_back(std::vector<Rule*>()); }
+    void NewAlternative(Nonterminal _nt)        { NewAlternative(); NewRule(_nt); }
+    void NewAlternative(Terminal _t)            { NewAlternative(); NewRule(_t); }
+    void NewAlternative(SemanticAction _sa)     { NewAlternative(); NewRule(_sa); }
+
+    void NewRule(Nonterminal _nt)               { mAlternatives.back().push_back(new RuleNonterminal(_nt)); }
+    void NewRule(Terminal _t)                   { mAlternatives.back().push_back(new RuleTerminal(_t)); }
+    void NewRule(SemanticAction _sa)            { mAlternatives.back().push_back(new RuleSemanticAction(_sa)); }
+    void NewRule(const Production &_prod) { 
+        // Only ever expect one alternative in the incoming production--would need to decide 
+        // what it even means to merge in many rules.
+        assert(_prod.mAlternatives.size() == 1); 
+        for (auto rule = _prod.mAlternatives.front().begin(); rule != _prod.mAlternatives.front().end(); ++rule) {
+            
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
+    std::vector<std::vector<Rule*>> mAlternatives;
 };
 
-template<typename TokenType>
-Node* Accept(const TokenType& _rs) { return nullptr; }
 
-template<typename TokenType>
-Node* Accept(const RuleSet<TokenType>& _rs) { return nullptr; }
-
-
-template <typename TokenType>
-inline RuleSet<TokenType> operator|(ProductionFunc _func, TokenType _tok)
+inline Node* Accept(Parser* _p, TokenList* _tl, Nonterminal _nt)
 {
-    RuleSet<TokenType> rs(_func);
+    return _nt(_p, _tl);
+}
+
+template<typename Terminal>
+inline Node* Accept(Parser* _p, TokenList* _tl, const Terminal& _rs) { return nullptr; }
+
+template<typename Terminal>
+inline Node* Accept(Parser* _p, TokenList* _tl, const Production<Terminal>& _rs) { return nullptr; }
+
+
+template <typename Terminal>
+inline Production<Terminal> operator|(Nonterminal _func, Terminal _tok)
+{
+    Production<Terminal> rs(_func);
     return rs | _tok;
 }
 
-template <typename TokenType>
-inline RuleSet<TokenType> operator&(TokenType _tok, ProductionFunc _rule)
+template <typename Terminal>
+inline Production<Terminal> operator&(Terminal _tok, Nonterminal _rule)
 {
-    RuleSet<TokenType> rs(_tok);
+    Production<Terminal> rs(_tok);
     return rs & _rule;
 }
 
-template <typename TokenType>
-inline RuleSet<TokenType> operator&(TokenType _tok, ProcessFunc _func)
+template <typename Terminal>
+inline Production<Terminal> operator&(Terminal _tok, SemanticAction _func)
 {
-    RuleSet<TokenType> rs(_tok);
+    Production<Terminal> rs(_tok);
     return rs & _func;
 }
 
@@ -101,11 +216,14 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 #define DeclareProduction(_name) \
-        extern Node* _name()
+        extern Node* _name(Parser* _p, TokenList* _tl)
 
 // ------------------------------------------------------------------------------------------------
 #define DefineProduction(_name) \
-    Node* _name()
+    Node* _name(Parser* _p, TokenList* _tl)
+    
+
+#define SemanticAction [](Parser* _p, TokenList* _tl, const int) -> Node*
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

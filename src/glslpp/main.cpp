@@ -1,10 +1,17 @@
 
 #include "glslppafx.h"
 
+#include "tokens.h"
+
 #include "glslpp/preproc.h"
-#include "common/parserutil.h"
 #include <iostream>
-#include "productions.h"
+
+struct StateObjectGLSL 
+{ 
+    bool IsValidType(const std::string& _type) const { return false; }
+};
+
+typedef LexerT<GLSLTokenID, StateObjectGLSL> GlslLexer;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -17,16 +24,11 @@ int main(int argc, char* argv[])
     
     GLPPOptions opts;
 
-    extern const LexicalEntry* GetGlslTokens();
-    extern const char** GetGlslReservedTypes();
+    GlslLexer lex(glslTokens, "struct { Foo f; };", new StateObjectGLSL);
 
-    StateObject parserState(GetGlslReservedTypes());
-    Lexer myLex(GetGlslTokens(), "struct Foo {\n\tdmat2x2 bar[3];\n\tfloat baz;\n};", &parserState);
-    for (Token tok = myLex.Pop(); !tok.IsEOF(); tok = myLex.Pop()) {
-        std::cout << tok << std::endl;
+    while (!lex.Peek().IsEOF()) {
+        std::cout << lex.Pop() << "\n";
     }
-
-    Node* n = Accept(primary_expression);
 
     if (argc < 2) {
         errCode = GLCCError_MissingRequiredParameter;
