@@ -2,6 +2,7 @@
 #include "glslppafx.h"
 
 #include "tokens.h"
+#include "productions.h"
 
 #include "glslpp/preproc.h"
 #include <iostream>
@@ -11,7 +12,7 @@ struct StateObjectGLSL
     bool IsValidType(const std::string& _type) const { return false; }
 };
 
-typedef LexerT<GLSLTokenID, StateObjectGLSL> GlslLexer;
+typedef LexerT<GLSLTokenID> GlslLexer;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -28,6 +29,14 @@ int main(int argc, char* argv[])
 
     while (!lex.Peek().IsEOF()) {
         std::cout << lex.Pop() << "\n";
+    }
+
+    ParserGLSL someVar("3");
+    Node* root = someVar.Parse();
+    if (root != nullptr) {
+        printf("Parse success!\n");
+    } else {
+        printf("Parse fail!\n");        
     }
 
     if (argc < 2) {

@@ -2,8 +2,6 @@
 
 #include "common/lexer.h"
 
-struct StateObjectGLSL;
-
 enum GLSLTokenID 
 {
     IGNORETOKEN = -2,
@@ -99,5 +97,5 @@ enum GLSLTokenID
 };
 
 typedef TokenT<GLSLTokenID> TokenGLSL;
-extern const LexicalEntry<GLSLTokenID, StateObjectGLSL> glslTokens[];
+extern const LexicalEntry<GLSLTokenID> glslTokens[];
 extern const char* glslReservedTypes[];

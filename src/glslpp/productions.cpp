@@ -1,6 +1,14 @@
 #include "glslppafx.h"
 #include "productions.h"
 
+#include "tokens.h"
+
+ParserGLSL::ParserGLSL(const char* _stringToLex)
+: ParserTGLSL(glslTokens, _stringToLex, nullptr)
+{ }
+
+DefineStartSymbol(primary_expression)
+
 DefineProduction(variable_identifier)
 {
     return Accept(_p, _tl, IDENTIFIER);

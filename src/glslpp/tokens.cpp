@@ -2,7 +2,7 @@
 
 #include "tokens.h"
 
-GLSLTokenID DetermineIdentifierSubtype(const std::string& _match, const GLSLTokenID _initialToken, StateObjectGLSL* _state);
+GLSLTokenID DetermineIdentifierSubtype(const std::string& _match, const GLSLTokenID _initialToken, void* _state);
 
 // ------------------------------------------------------------------------------------------------
 const char* glslReservedTypes[] = {
@@ -95,7 +95,7 @@ const char* glslReservedTypes[] = {
 };
 
 // ------------------------------------------------------------------------------------------------
-const LexicalEntry<GLSLTokenID, StateObjectGLSL> glslTokens[] = {
+const LexicalEntry<GLSLTokenID> glslTokens[] = {
     { "[ \t\n]+"                                , IGNORETOKEN      , nullptr },
     { "attribute"                               , ATTRIBUTE        , nullptr },
     { "const"                                   , CONST            , nullptr },
@@ -192,7 +192,7 @@ const LexicalEntry<GLSLTokenID, StateObjectGLSL> glslTokens[] = {
 };
 
 // ------------------------------------------------------------------------------------------------
-GLSLTokenID DetermineIdentifierSubtype(const std::string& _match, const GLSLTokenID _initialToken, StateObjectGLSL* _state)
+GLSLTokenID DetermineIdentifierSubtype(const std::string& _match, const GLSLTokenID _initialToken, void* _state)
 {
     return _initialToken;
 }

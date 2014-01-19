@@ -7,5 +7,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <iostream>
 
 #include "common/common.h"

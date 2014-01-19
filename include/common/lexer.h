@@ -4,15 +4,16 @@
 #include <set>
 #include <vector>
 
+
 typedef long long StreamOffset;
 
 // A single entry in a table of lexical rules for how to parse a string into tokens. Pattern 
 // should be a <regex> conformant string specifying the rule for a single token.
 // Tokens are specified in decreasing priority.
-template <typename Terminal, typename TStateObject> 
+template <typename Terminal> 
 struct LexicalEntry
 {
-    typedef Terminal (*TCheckFunc)(const std::string& _match, const Terminal _initialToken, TStateObject* _state);
+    typedef Terminal (*TCheckFunc)(const std::string& _match, const Terminal _initialToken, void* _state);
 
 	const char* Pattern;
 	const Terminal Token;
@@ -60,6 +61,10 @@ public:
     , mLocation(_streamPos)
     { }
 
+    inline Terminal GetType() const { 
+        return mType;
+    }
+
     inline bool IsEOF() const {
         return mType == Terminal::EOFTOKEN;
     }
@@ -81,15 +86,14 @@ private:
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
+template <typename Terminal>
 class LexerT
 {
 public:
     // _rules is expected to end with an entry that has a nullptr for a Pattern.
 	// The string is the string which is to be lexed, and must not be NULL.
-	// The StateObject is an optional state object which carries the state of the whole
-	// lex and parse result, for reentrancy. It is optional.
-	LexerT(const LexicalEntry<Terminal, TStateObject>* _rules, const char* _stringToLex, TStateObject* _state);
+	// The state parameter is a state object. It cannot be specified by type, annoyingly. 
+	LexerT(const LexicalEntry<Terminal>* _rules, const char* _stringToLex, void* _state);
 	~LexerT();
 
 	// Peek at the next token and return.
@@ -99,14 +103,14 @@ public:
 	TokenT<Terminal> Pop();
 
 private:
-    void ConstructRules(const LexicalEntry<Terminal, TStateObject>* _rules);
+    void ConstructRules(const LexicalEntry<Terminal>* _rules);
     TokenT<Terminal> FindNextToken();
 
     struct RuleEntry 
     {
         std::regex Regex;
         const Terminal Token;
-        typename LexicalEntry<Terminal, TStateObject>::TCheckFunc TokenCallback;    
+        typename LexicalEntry<Terminal>::TCheckFunc TokenCallback;    
     };
 
 private:
@@ -114,7 +118,7 @@ private:
     std::string mStringToLex;
     std::string::const_iterator mSrcPos;
     StreamPosition mStreamPosition;
-	TStateObject* mState;
+	void* mState;
     TokenT<Terminal> mLookaheadToken;
 
     std::set<std::string> mTypes;
@@ -122,8 +126,8 @@ private:
 
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-LexerT<Terminal, TStateObject>::LexerT(const LexicalEntry<Terminal, TStateObject>* _rules, const char* _stringToLex, TStateObject* _state)
+template <typename Terminal>
+LexerT<Terminal>::LexerT(const LexicalEntry<Terminal>* _rules, const char* _stringToLex, void* _state)
 : mStringToLex(_stringToLex)
 , mSrcPos(mStringToLex.cbegin())
 , mState(_state)
@@ -133,22 +137,22 @@ LexerT<Terminal, TStateObject>::LexerT(const LexicalEntry<Terminal, TStateObject
 }
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-LexerT<Terminal, TStateObject>::~LexerT()
+template <typename Terminal>
+LexerT<Terminal>::~LexerT()
 {
 
 }
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-TokenT<Terminal> LexerT<Terminal, TStateObject>::Peek() const 
+template <typename Terminal>
+TokenT<Terminal> LexerT<Terminal>::Peek() const 
 { 
     return mLookaheadToken; 
 }
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-TokenT<Terminal> LexerT<Terminal, TStateObject>::Pop() 
+template <typename Terminal>
+TokenT<Terminal> LexerT<Terminal>::Pop() 
 { 
     TokenT<Terminal> retToken = mLookaheadToken;
     mLookaheadToken = FindNextToken();
@@ -156,8 +160,8 @@ TokenT<Terminal> LexerT<Terminal, TStateObject>::Pop()
 }
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-void LexerT<Terminal, TStateObject>::ConstructRules(const LexicalEntry<Terminal, TStateObject>* _rules)
+template <typename Terminal>
+void LexerT<Terminal>::ConstructRules(const LexicalEntry<Terminal>* _rules)
 {
     for (int i = 0; _rules[i].Pattern; ++i) {
         std::regex re = std::regex(_rules[i].Pattern, std::regex::optimize | std::regex::ECMAScript);
@@ -166,8 +170,8 @@ void LexerT<Terminal, TStateObject>::ConstructRules(const LexicalEntry<Terminal,
 }
 
 // ------------------------------------------------------------------------------------------------
-template <typename Terminal, typename TStateObject>
-TokenT<Terminal> LexerT<Terminal, TStateObject>::FindNextToken()
+template <typename Terminal>
+TokenT<Terminal> LexerT<Terminal>::FindNextToken()
 {
     TokenT<Terminal> retToken;
 
